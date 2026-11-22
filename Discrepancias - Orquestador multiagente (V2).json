@@ -1,0 +1,1080 @@
+{
+  "name": "Discrepancias - Orquestador multiagente",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "suasmx-discrepancia-tecnica",
+        "options": {}
+      },
+      "id": "d491e518-2941-4285-8dd3-35c9588a6456",
+      "name": "Webhook_Discrepancia",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        112
+      ],
+      "webhookId": "0e0a44b2-47ef-4f69-af38-dfa80a8737d5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.case_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "leftValue": "={{ $json.body.description }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5698c43c-065e-4840-bcea-d47136032c0b",
+      "name": "Validar_Entrada",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        224,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://raw.githubusercontent.com/suasmexico-tech/AeroAgentKnowledge/refs/heads/main/kb-mro-sintetica.json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "system",
+              "value": "={{ $json.body.system }}"
+            },
+            {
+              "name": "q",
+              "value": "={{ $json.body.description }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d1fa518b-8ee5-4554-88e0-e1089415a702",
+      "name": "HTTP_Consulta_Conocimiento",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        496,
+        224
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=DISCREPANCIA:\n{{ JSON.stringify($(\"Webhook_Discrepancia\").first().json.body) }}\n\nRESULTADOS DE LA CONSULTA DE CONOCIMIENTO:\n{{ JSON.stringify($(\"HTTP_Consulta_Conocimiento\").all().map(i => i.json)) }}",
+        "options": {
+          "systemMessage": "Eres el Subagente de Recuperacion. Recibes una discrepancia tecnica y los resultados de la base de conocimiento. Selecciona solo la evidencia relevante, cita cada fuente por su id y titulo, y descarta lo irrelevante. No inventes informacion: si no hay evidencia suficiente, indicalo explicitamente. Responde en espanol con una lista de evidencias (id, titulo, extracto, relevancia)."
+        }
+      },
+      "id": "3429385c-8094-4bd8-bfa4-ec4b3260b19e",
+      "name": "Subagente_Recuperacion",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        720,
+        224
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5-5",
+          "cachedResultName": "Claude Sonnet 5.5"
+        },
+        "options": {}
+      },
+      "id": "6dc4aa1c-ac26-4e9d-982b-eb35bac42c13",
+      "name": "Chat Model Recuperacion",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        800,
+        448
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": null,
+          "name": "Gateway credits",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=DISCREPANCIA:\n{{ JSON.stringify($(\"Webhook_Discrepancia\").first().json.body) }}\n\nEVIDENCIA RECUPERADA:\n{{ $(\"Subagente_Recuperacion\").first().json.output }}",
+        "options": {
+          "systemMessage": "Eres el Subagente de Analisis y Riesgo. Con la discrepancia y la evidencia recuperada, clasifica: (1) nivel de riesgo (BAJO, MEDIO, ALTO, CRITICO) con justificacion; (2) ambiguedad (BAJA, MEDIA, ALTA) y que informacion falta; (3) confianza (0-100%) en el analisis; (4) si el caso parece dentro o fuera de alcance. Se conservador y no inventes datos. Responde en espanol de forma estructurada."
+        }
+      },
+      "id": "c5e5c358-d550-425c-ac85-4545029ecb0a",
+      "name": "Subagente_Analisis_Riesgo",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1024,
+        224
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5-5",
+          "cachedResultName": "Claude Sonnet 5.5"
+        },
+        "options": {}
+      },
+      "id": "fe44d219-055e-4ef0-868e-ad103a766b5e",
+      "name": "Chat Model Analisis Riesgo",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        1104,
+        448
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": null,
+          "name": "Gateway credits",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=DISCREPANCIA:\n{{ JSON.stringify($(\"Webhook_Discrepancia\").first().json.body) }}\n\nEVIDENCIA:\n{{ $(\"Subagente_Recuperacion\").first().json.output }}\n\nANALISIS DE RIESGO:\n{{ $(\"Subagente_Analisis_Riesgo\").first().json.output }}",
+        "options": {
+          "systemMessage": "Eres el Subagente de Recomendacion. Genera una propuesta tecnica PRELIMINAR para la discrepancia, basada unicamente en la evidencia y el analisis de riesgo recibidos. Cita cada afirmacion con su fuente entre corchetes (por ejemplo [KB-001]). Incluye acciones propuestas, advertencias y que debe verificar el revisor humano. No emitas aprobaciones: la propuesta es preliminar y requiere revision humana. Responde en espanol."
+        }
+      },
+      "id": "fa435f00-2ac9-408b-bb17-6ebefbf98355",
+      "name": "Subagente_Recomendacion",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1376,
+        224
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5-5",
+          "cachedResultName": "Claude Sonnet 5.5"
+        },
+        "options": {}
+      },
+      "id": "55077bcc-d567-4580-aba5-6665a242b4e9",
+      "name": "Chat Model Recomendacion",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        1456,
+        448
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": null,
+          "name": "Gateway credits",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=CASO:\n{{ JSON.stringify($(\"Webhook_Discrepancia\").first().json.body) }}\n\nSALIDA SUBAGENTE RECUPERACION:\n{{ $(\"Subagente_Recuperacion\").first().json.output }}\n\nSALIDA SUBAGENTE ANALISIS Y RIESGO:\n{{ $(\"Subagente_Analisis_Riesgo\").first().json.output }}\n\nSALIDA SUBAGENTE RECOMENDACION:\n{{ $(\"Subagente_Recomendacion\").first().json.output }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Eres el Agente_Orquestador de AeroKnowledge Agent para triage y apoyo técnico en mantenimiento aeronáutico (MRO), operando exclusivamente con datos de prueba/sintéticos.\n\nTu responsabilidad es coordinar el análisis de discrepancias técnicas mediante tres subagentes:\n1. Subagente_Recuperacion: obtiene antecedentes documentales y casos históricos similares.\n2. Subagente_Analisis_Riesgo: evalúa contexto, ambigüedad, nivel de confianza y necesidad de escalamiento.\n3. Subagente_Recomendacion: redacta opciones técnicas fundamentadas únicamente en la evidencia recuperada.\n\nReglas estrictas:\n- Nunca inventes normativas, límites de aeronavegabilidad, procedimientos ni aprobaciones.\n- Si la solicitud está fuera del alcance MRO o solicita firma/aprobación automática sin humano, marca estado \"FUERA_DE_ALCANCE\" y no avances a aprobación de acción irreversible.\n- Si la evidencia es insuficiente o el reporte es ambiguo, marca \"INCERTIDUMBRE_ALTA\" y solicita aclaración/escalamiento a experto.\n- Devuelve siempre un resumen estructurado con: (a) Estado/Ruta, (b) Antecedentes clave y citas, (c) Riesgo y confianza, (d) Propuesta técnica preliminar para revisión humana.\n\nFormato de salida (objeto JSON del esquema): decision = REVISION_HUMANA cuando el caso está en alcance, con evidencia suficiente y confianza aceptable (ruta a aprobación humana); FUERA_DE_ALCANCE; o INCERTIDUMBRE_ALTA. El resumen (a)-(c) va en el campo resumen (incluye antecedentes con citas por id), riesgo y confianza (0-100) en sus campos, y (d) en propuesta_tecnica. Explica la ruta elegida en motivo_decision."
+        }
+      },
+      "id": "ec8a164f-8d91-41d9-b5fa-6da761896a9f",
+      "name": "Agente_Orquestador",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1504,
+        0
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5-5",
+          "cachedResultName": "Claude Sonnet 5.5"
+        },
+        "options": {}
+      },
+      "id": "a609499b-d02a-454d-becb-c13f531289a8",
+      "name": "Chat Model Orquestador",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        1520,
+        224
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": null,
+          "name": "Gateway credits",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"case_id\":{\"type\":\"string\"},\"decision\":{\"type\":\"string\",\"enum\":[\"REVISION_HUMANA\",\"FUERA_DE_ALCANCE\",\"INCERTIDUMBRE_ALTA\"]},\"riesgo\":{\"type\":\"string\"},\"confianza\":{\"type\":\"number\"},\"resumen\":{\"type\":\"string\"},\"propuesta_tecnica\":{\"type\":\"string\"},\"motivo_decision\":{\"type\":\"string\"}},\"required\":[\"case_id\",\"decision\",\"resumen\",\"motivo_decision\"]}"
+      },
+      "id": "16b3ddef-9d00-4e26-85e7-e250eef9660a",
+      "name": "Parser Decision Orquestador",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1648,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.output.decision }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "REVISION_HUMANA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "935830ef-29a7-449f-b745-c58e3d41921f",
+      "name": "Requiere_Aprobacion",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1856,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "revisor.mro@ejemplo-sintetico.com",
+        "subject": "=Aprobacion requerida: caso {{ $json.output.case_id }}",
+        "message": "=Caso: {{ $json.output.case_id }}\nRiesgo: {{ $json.output.riesgo }} | Confianza: {{ $json.output.confianza }}%\n\nResumen:\n{{ $json.output.resumen }}\n\nPropuesta tecnica preliminar:\n{{ $json.output.propuesta_tecnica }}\n\nMotivo de la decision del orquestador:\n{{ $json.output.motivo_decision }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "Aprobar",
+            "disapproveLabel": "Rechazar"
+          }
+        },
+        "options": {}
+      },
+      "id": "fbcae07c-e3a5-48d6-8f09-8ca91980d279",
+      "name": "Aprobacion_Humana",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2080,
+        112
+      ],
+      "webhookId": "23c0e6fb-f383-495f-947d-d2827d8d83cb",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1JfrPZmuEYL488oU",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "EWM98GfTxAG0o9gg",
+          "cachedResultName": "Discrepancias_Resultados"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "case_id": "={{ $(\"Agente_Orquestador\").first().json.output.case_id }}",
+            "sistema": "={{ $(\"Webhook_Discrepancia\").first().json.body.system }}",
+            "decision_orquestador": "={{ $(\"Agente_Orquestador\").first().json.output.decision }}",
+            "riesgo": "={{ $(\"Agente_Orquestador\").first().json.output.riesgo }}",
+            "confianza": "={{ $(\"Agente_Orquestador\").first().json.output.confianza }}",
+            "propuesta_tecnica": "={{ $(\"Agente_Orquestador\").first().json.output.propuesta_tecnica }}",
+            "resultado_humano": "={{ $(\"Aprobacion_Humana\").first().json.data.approved ? \"APROBADO\" : \"RECHAZADO\" }}",
+            "solicitante_email": "={{ $(\"Webhook_Discrepancia\").first().json.body.solicitante_email || \"revisor.mro@ejemplo-sintetico.com\" }}",
+            "decidido_en": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "case_id",
+              "displayName": "case_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sistema",
+              "displayName": "sistema",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "decision_orquestador",
+              "displayName": "decision_orquestador",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "riesgo",
+              "displayName": "riesgo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "confianza",
+              "displayName": "confianza",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "propuesta_tecnica",
+              "displayName": "propuesta_tecnica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resultado_humano",
+              "displayName": "resultado_humano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "solicitante_email",
+              "displayName": "solicitante_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "decidido_en",
+              "displayName": "decidido_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "48dd4f19-5291-4d3c-a2f6-c80c3d70c341",
+      "name": "Registrar_Resultado",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2080,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $(\"Webhook_Discrepancia\").first().json.body.solicitante_email || \"revisor.mro@ejemplo-sintetico.com\" }}",
+        "subject": "=Resultado de revision humana: caso {{ $(\"Agente_Orquestador\").first().json.output.case_id }} - {{ $(\"Aprobacion_Humana\").first().json.data.approved ? \"APROBADO\" : \"RECHAZADO\" }}",
+        "emailType": "text",
+        "message": "=Su discrepancia tecnica {{ $(\"Agente_Orquestador\").first().json.output.case_id }} ({{ $(\"Webhook_Discrepancia\").first().json.body.system }}) fue revisada por un humano.\n\nResultado: {{ $(\"Aprobacion_Humana\").first().json.data.approved ? \"APROBADO\" : \"RECHAZADO\" }}\n\nRiesgo: {{ $(\"Agente_Orquestador\").first().json.output.riesgo }}\nConfianza: {{ $(\"Agente_Orquestador\").first().json.output.confianza }}%\n\nPropuesta tecnica preliminar:\n{{ $(\"Agente_Orquestador\").first().json.output.propuesta_tecnica }}\n\nNota: datos de prueba/sinteticos. Esta propuesta es preliminar y no constituye una liberacion ni disposicion de aeronavegabilidad.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c8842fcd-1217-42b5-b64f-d6261f32ce06",
+      "name": "Avisar_Solicitante",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2304,
+        224
+      ],
+      "webhookId": "96b6b954-57e0-4953-91b3-07fbbf052449",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1JfrPZmuEYL488oU",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "EWM98GfTxAG0o9gg",
+          "cachedResultName": "Discrepancias_Resultados"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "case_id": "={{ $json.output.case_id }}",
+            "sistema": "={{ $(\"Webhook_Discrepancia\").first().json.body.system || \"\" }}",
+            "decision_orquestador": "={{ $json.output.decision }}",
+            "riesgo": "={{ $json.output.riesgo || \"\" }}",
+            "confianza": "={{ $json.output.confianza }}",
+            "propuesta_tecnica": "={{ $json.output.motivo_decision }}",
+            "resultado_humano": "NO_ESCALADO",
+            "solicitante_email": "={{ $(\"Webhook_Discrepancia\").first().json.body.solicitante_email || \"\" }}",
+            "decidido_en": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "case_id",
+              "displayName": "case_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sistema",
+              "displayName": "sistema",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "decision_orquestador",
+              "displayName": "decision_orquestador",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "riesgo",
+              "displayName": "riesgo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "confianza",
+              "displayName": "confianza",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "propuesta_tecnica",
+              "displayName": "propuesta_tecnica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resultado_humano",
+              "displayName": "resultado_humano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "solicitante_email",
+              "displayName": "solicitante_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "decidido_en",
+              "displayName": "decidido_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "df505e56-d825-457a-90fa-9ceb3ddf5eb3",
+      "name": "Registrar_Caso_No_Escalado",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2128,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "EWM98GfTxAG0o9gg",
+          "cachedResultName": "Discrepancias_Resultados"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "case_id": "={{ $(\"Webhook_Discrepancia\").first().json.body.case_id }}",
+            "sistema": "={{ $(\"Webhook_Discrepancia\").first().json.body.system || \"\" }}",
+            "decision_orquestador": "N/A",
+            "propuesta_tecnica": "={{ \"Fallo en HTTP_Consulta_Conocimiento tras 3 intentos: \" + JSON.stringify($json.error || \"sin detalle\").slice(0, 500) }}",
+            "resultado_humano": "ERROR_API",
+            "solicitante_email": "={{ $(\"Webhook_Discrepancia\").first().json.body.solicitante_email || \"\" }}",
+            "decidido_en": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "case_id",
+              "displayName": "case_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sistema",
+              "displayName": "sistema",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "decision_orquestador",
+              "displayName": "decision_orquestador",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "riesgo",
+              "displayName": "riesgo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "confianza",
+              "displayName": "confianza",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "propuesta_tecnica",
+              "displayName": "propuesta_tecnica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resultado_humano",
+              "displayName": "resultado_humano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "solicitante_email",
+              "displayName": "solicitante_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "decidido_en",
+              "displayName": "decidido_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a35a8929-da76-4b34-86ae-36a9f7a2acd5",
+      "name": "Registrar_Error_API",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        784,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "EWM98GfTxAG0o9gg",
+          "cachedResultName": "Discrepancias_Resultados"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "case_id": "={{ $json.body.case_id || \"SIN_ID\" }}",
+            "sistema": "={{ $json.body.system || \"\" }}",
+            "decision_orquestador": "N/A",
+            "propuesta_tecnica": "Entrada invalida: falta case_id o description",
+            "resultado_humano": "ENTRADA_INVALIDA",
+            "solicitante_email": "={{ $json.body.solicitante_email || \"\" }}",
+            "decidido_en": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "case_id",
+              "displayName": "case_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sistema",
+              "displayName": "sistema",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "decision_orquestador",
+              "displayName": "decision_orquestador",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "riesgo",
+              "displayName": "riesgo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "confianza",
+              "displayName": "confianza",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "propuesta_tecnica",
+              "displayName": "propuesta_tecnica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resultado_humano",
+              "displayName": "resultado_humano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "solicitante_email",
+              "displayName": "solicitante_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "decidido_en",
+              "displayName": "decidido_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bb57a696-1bb2-41c9-845f-dc1e5aaa1090",
+      "name": "Registrar_Entrada_Invalida",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        608,
+        256
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook_Discrepancia": {
+      "main": [
+        [
+          {
+            "node": "Validar_Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar_Entrada": {
+      "main": [
+        [
+          {
+            "node": "HTTP_Consulta_Conocimiento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar_Entrada_Invalida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_Consulta_Conocimiento": {
+      "main": [
+        [
+          {
+            "node": "Subagente_Recuperacion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar_Error_API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subagente_Recuperacion": {
+      "main": [
+        [
+          {
+            "node": "Subagente_Analisis_Riesgo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Model Recuperacion": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Subagente_Recuperacion",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subagente_Analisis_Riesgo": {
+      "main": [
+        [
+          {
+            "node": "Subagente_Recomendacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Model Analisis Riesgo": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Subagente_Analisis_Riesgo",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subagente_Recomendacion": {
+      "main": [
+        [
+          {
+            "node": "Agente_Orquestador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Model Recomendacion": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Subagente_Recomendacion",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente_Orquestador": {
+      "main": [
+        [
+          {
+            "node": "Requiere_Aprobacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Model Orquestador": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente_Orquestador",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser Decision Orquestador": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Agente_Orquestador",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requiere_Aprobacion": {
+      "main": [
+        [
+          {
+            "node": "Aprobacion_Humana",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar_Caso_No_Escalado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aprobacion_Humana": {
+      "main": [
+        [
+          {
+            "node": "Registrar_Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar_Resultado": {
+      "main": [
+        [
+          {
+            "node": "Avisar_Solicitante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d0a167b7-7e5b-46bf-bfa2-153e5e49d3af",
+  "meta": {
+    "instanceId": "e8dc587442d06bca7b9d886d03de51fbda83ddceb23d68e42841164d222d37a1"
+  },
+  "nodeGroups": [
+    {
+      "id": "75c25306-b069-47c8-beb1-2bcac48d1b6b",
+      "name": "Recuperar conocimiento",
+      "nodeIds": [
+        "d1fa518b-8ee5-4554-88e0-e1089415a702",
+        "a35a8929-da76-4b34-86ae-36a9f7a2acd5",
+        "3429385c-8094-4bd8-bfa4-ec4b3260b19e",
+        "6dc4aa1c-ac26-4e9d-982b-eb35bac42c13"
+      ],
+      "description": "Consulta la fuente de conocimiento con la discrepancia y extrae la evidencia relevante con citas"
+    },
+    {
+      "id": "d87fde7e-4669-46c9-91f6-27e1096b9209",
+      "name": "Decidir y aprobar",
+      "nodeIds": [
+        "ec8a164f-8d91-41d9-b5fa-6da761896a9f",
+        "a609499b-d02a-454d-becb-c13f531289a8",
+        "16b3ddef-9d00-4e26-85e7-e250eef9660a",
+        "935830ef-29a7-449f-b745-c58e3d41921f",
+        "df505e56-d825-457a-90fa-9ceb3ddf5eb3",
+        "fbcae07c-e3a5-48d6-8f09-8ca91980d279"
+      ],
+      "description": "Consolida los analisis, decide la ruta y solicita aprobacion humana por correo si el caso lo amerita"
+    },
+    {
+      "id": "3364aff3-1d7c-418b-a6d4-9d3ce0adbef1",
+      "name": "Registrar y avisar",
+      "nodeIds": [
+        "48dd4f19-5291-4d3c-a2f6-c80c3d70c341",
+        "c8842fcd-1217-42b5-b64f-d6261f32ce06"
+      ],
+      "description": "Tras la decision humana, guarda el resultado en la tabla de casos y avisa por correo al solicitante"
+    },
+    {
+      "id": "4dce3605-d60e-4de2-8d6d-3c5805099988",
+      "name": "Analizar y recomendar",
+      "nodeIds": [
+        "c5e5c358-d550-425c-ac85-4545029ecb0a",
+        "fe44d219-055e-4ef0-868e-ad103a766b5e",
+        "fa435f00-2ac9-408b-bb17-6ebefbf98355",
+        "55077bcc-d567-4580-aba5-6665a242b4e9"
+      ],
+      "description": "Clasifica riesgo, ambiguedad y confianza, y redacta la propuesta tecnica preliminar citada"
+    }
+  ],
+  "id": "8NHGyiqaOxcqbatJ",
+  "tags": []
+}
