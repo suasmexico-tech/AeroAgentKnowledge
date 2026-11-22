@@ -1,0 +1,52 @@
+[
+  {
+    "id": "KB-SYN-001",
+    "titulo": "Procedimiento Sintético ATA-27: Vibración intermitente en actuador de alerón",
+    "sistema": "ATA-27 Controles de Vuelo",
+    "tipo_fuente": "Manual Técnico Sintético (AMM-SYN-27-14)",
+    "sintoma_clave": "vibracion intermitente actuador aleron prueba funcional tierra",
+    "extracto": "Ante vibración intermitente en actuador de alerón sin fugas hidráulicas externas, verificar holgura en herrajes de sujeción (límite sintético 0.015 in), purgar aire atrapado en línea de retorno y comprobar señal del transductor LVDT.",
+    "resolucion_historica": "Caso previo DISC-SYN-042: Se detectó aire atrapado tras reemplazo de filtro hidráulico; el purgado del circuito y ajuste de par en soporte eliminaron la oscilación.",
+    "criticidad": "MEDIO"
+  },
+  {
+    "id": "KB-SYN-002",
+    "titulo": "Boletín Sintético ATA-32: Oscilación de presión en frenos durante rodaje",
+    "sistema": "ATA-32 Tren de Aterrizaje",
+    "tipo_fuente": "Boletín de Servicio Sintético (SB-SYN-32-08)",
+    "sintoma_clave": "oscilacion presion frenos rodaje valvula antiskid",
+    "extracto": "Fluctuaciones de presión en el sistema normal de frenos pueden originarse por contaminación en la válvula selectora o deriva en el sensor de velocidad de rueda. Realizar prueba BITE del módulo antiskid y medición de resistencia.",
+    "resolucion_historica": "Caso previo DISC-SYN-057: Limpieza de conector de sensor de velocidad izquierdo y calibración de válvula restauraron presión nominal.",
+    "criticidad": "ALTO"
+  },
+  {
+    "id": "KB-SYN-003",
+    "titulo": "Guía Sintética ATA-53: Corrosión superficial localizada en cuaderna inferior",
+    "sistema": "ATA-53 Fuselaje / Estructuras",
+    "tipo_fuente": "Manual de Reparación Estructural Sintético (SRM-SYN-53-21)",
+    "sintoma_clave": "corrosion superficial localizada cuaderna inferior drenaje",
+    "extracto": "La corrosión superficial leve (menos del 5% del espesor nominal) en zona de sentina requiere limpieza mecánica controlada, medición ultrasónica de espesor remanente y aplicación de imprimación anticorrosiva. Si supera el umbral, escalar a Ingeniería Estructural.",
+    "resolucion_historica": "Caso previo DISC-SYN-063: Espesor remanente dentro de tolerancia (97%); tratamiento anticorrosivo y destape de drenaje completados sin reparación mayor.",
+    "criticidad": "MEDIO"
+  },
+  {
+    "id": "KB-SYN-004",
+    "titulo": "Referencia Sintética ATA-21: Deriva térmica en sensor de ducto de cabina",
+    "sistema": "ATA-21 Aire Acondicionado",
+    "tipo_fuente": "Historial Técnico Sintético (HIST-SYN-21-09)",
+    "sintoma_clave": "deriva termica sensor ducto cabina temperatura fluctuante",
+    "extracto": "Lecturas erráticas de temperatura en ducto principal suelen deberse a degradación del termistor o falso contacto en arnés cercano a abrazadera de mamparo. Comparar lectura contra sensor redundante antes de reemplazar válvula mezcladora.",
+    "resolucion_historica": "Caso previo DISC-SYN-071: Reemplazo de sensor de temperatura de ducto y reaseguramiento de arnés resolvieron la discrepancia.",
+    "criticidad": "BAJO"
+  },
+  {
+    "id": "KB-SYN-005",
+    "titulo": "Procedimiento Sintético ATA-24: Caída transitoria de voltaje en bus auxiliar",
+    "sistema": "ATA-24 Energía Eléctrica",
+    "tipo_fuente": "Manual Técnico Sintético (AMM-SYN-24-33)",
+    "sintoma_clave": "caida transitoria voltaje bus auxiliar contactor",
+    "extracto": "Microcortes o caídas de tensión en bus auxiliar durante transferencia de carga requieren inspección de resistencia de contacto en relé de transferencia y verificación de apriete en barras colectoras.",
+    "resolucion_historica": "Caso previo DISC-SYN-088: Contactor de transferencia con alta resistencia interna sustituido; transferencia estabilizada bajo carga.",
+    "criticidad": "ALTO"
+  }
+]
